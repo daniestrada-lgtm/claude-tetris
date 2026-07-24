@@ -1,0 +1,58 @@
+name: Claude Issue Triage
+
+on:
+  issues:
+    types: [opened, edited]
+
+concurrency:
+  group: claude-issue-triage-${{ github.event.issue.number }}
+  cancel-in-progress: true
+
+jobs:
+  triage:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+      id-token: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Run Claude issue triage
+        uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          prompt: |
+            Eres el encargado de hacer triage del issue #${{ github.event.issue.number }}
+            del repositorio ${{ github.repository }} (un juego de Tetris en JavaScript vanilla).
+
+            Realiza estos pasos EN ORDEN:
+
+            1. Lee el issue con:  gh issue view ${{ github.event.issue.number }}
+            2. Revisa el código relevante del repo (game.js, index.html, style.css, CLAUDE.md)
+               para entender el contexto técnico del problema o petición.
+            3. LABELS:
+               - Lista las etiquetas existentes con:  gh label list
+               - Determina 1 a 4 etiquetas apropiadas según el contenido del issue
+                 (ej.: bug, enhancement, ui, gameplay, performance, docs, question).
+               - Si alguna etiqueta necesaria NO existe, créala con:
+                   gh label create "<nombre>" --description "<descripción>" --color "<hex sin #>"
+               - Aplica las etiquetas al issue con:
+                   gh issue edit ${{ github.event.issue.number }} --add-label "l1,l2"
+            4. DIAGNÓSTICO: publica UN comentario en el issue, escrito EN ESPAÑOL, con:
+                 gh issue comment ${{ github.event.issue.number }} --body "<contenido>"
+               El comentario debe incluir:
+                 - **Resumen**: qué pide o reporta el issue.
+                 - **Diagnóstico técnico**: causa probable / área del código afectada,
+                   referenciando archivos y funciones concretas (ej. game.js: clearLines).
+                 - **Enfoque sugerido de solución**: pasos de alto nivel para implementarla.
+                 - **Riesgos / consideraciones**: casos borde o efectos colaterales.
+               Nota: NO edites el cuerpo del issue; usa solo un comentario.
+
+            Si el issue fue editado y ya existe un comentario de diagnóstico tuyo,
+            publica un comentario nuevo actualizado en vez de duplicar el análisis viejo.
+          claude_args: |
+            --allowed-tools "Bash(gh issue view:*),Bash(gh issue edit:*),Bash(gh issue comment:*),Bash(gh label list:*),Bash(gh label create:*),Read,Grep,Glob"
