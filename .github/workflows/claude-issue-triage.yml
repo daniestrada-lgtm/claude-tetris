@@ -50,6 +50,9 @@ jobs:
                    referenciando archivos y funciones concretas (ej. game.js: clearLines).
                  - **Enfoque sugerido de solución**: pasos de alto nivel para implementarla.
                  - **Riesgos / consideraciones**: casos borde o efectos colaterales.
+               El contenido debe estar escrito en formato Markdown válido y bien
+               interpretable por GitHub (encabezados, listas, negritas y bloques de
+               código con las comillas invertidas correspondientes).
                Nota: NO edites el cuerpo del issue; usa solo un comentario.
 
             Si el issue fue editado y ya existe un comentario de diagnóstico tuyo,
