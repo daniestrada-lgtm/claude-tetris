@@ -57,12 +57,22 @@ const overlayTitle = document.getElementById('overlay-title');
 const overlayScore = document.getElementById('overlay-score');
 const restartBtn = document.getElementById('restart-btn');
 const themeToggle = document.getElementById('theme-toggle');
+const pauseMenu = document.getElementById('pause-menu');
+const pmResumeBtn = document.getElementById('pm-resume');
+const pmRestartBtn = document.getElementById('pm-restart');
+const pmControlsToggleBtn = document.getElementById('pm-controls-toggle');
+const pmControlsView = document.getElementById('pm-controls-view');
+const pmStartLevelSelect = document.getElementById('pm-start-level');
+const controlsList = document.getElementById('controls-list');
 
 const THEME_STORAGE_KEY = 'tetris-theme';
+const START_LEVEL_STORAGE_KEY = 'tetris-start-level';
+const MAX_START_LEVEL = 10;
 const GRID_COLOR = { dark: '#22222e', light: '#e0e0e8' };
 
 let board, current, next, score, lines, level, paused, gameOver, lastTime, dropAccum, dropInterval, animId;
 let powerCharge, powerArmed, freezeLeft, flashCells, flashLeft;
+let startLevel; // nivel con el que arrancará la PRÓXIMA partida (persistido, no afecta a la partida en curso)
 
 function createBoard() {
   return Array.from({ length: ROWS }, () => new Array(COLS).fill(0));
@@ -122,6 +132,11 @@ function merge() {
         board[current.y + r][current.x + c] = current.shape[r][c];
 }
 
+// velocidad de caída (ms) para un nivel dado; usada tanto en clearLines() como en init()
+function dropIntervalForLevel(lvl) {
+  return Math.max(100, 1000 - (lvl - 1) * 90);
+}
+
 function clearLines() {
   let cleared = 0;
   for (let r = ROWS - 1; r >= 0; r--) {
@@ -135,8 +150,8 @@ function clearLines() {
   if (cleared) {
     lines += cleared;
     score += LINE_SCORES[Math.min(cleared, LINE_SCORES.length - 1)] * level;
-    level = Math.floor(lines / 10) + 1;
-    dropInterval = Math.max(100, 1000 - (level - 1) * 90);
+    level = startLevel + Math.floor(lines / 10);
+    dropInterval = dropIntervalForLevel(level);
     powerCharge += cleared;
     if (powerCharge >= POWERUP_EVERY) { powerCharge -= POWERUP_EVERY; powerArmed = true; }
     updateHUD();
@@ -428,17 +443,57 @@ function loadTheme() {
   setTheme(localStorage.getItem(THEME_STORAGE_KEY) === 'light');
 }
 
+// llena el <select> del menú de pausa con los niveles 1..MAX_START_LEVEL
+function populateStartLevelOptions() {
+  for (let i = 1; i <= MAX_START_LEVEL; i++) {
+    const opt = document.createElement('option');
+    opt.value = i;
+    opt.textContent = i;
+    pmStartLevelSelect.appendChild(opt);
+  }
+}
+
+// clona la lista de controles del panel lateral dentro del menú de pausa,
+// para no mantener el mismo <ul> duplicado en dos sitios de index.html
+function initControlsView() {
+  const clone = controlsList.cloneNode(true);
+  clone.removeAttribute('id'); // evita un id duplicado en el DOM
+  pmControlsView.appendChild(clone);
+}
+
+// lee el nivel persistido y actualiza la variable activa `startLevel`;
+// se llama desde init() para que cada partida nueva recoja el valor más reciente
+function loadStartLevel() {
+  const stored = parseInt(localStorage.getItem(START_LEVEL_STORAGE_KEY), 10);
+  startLevel = (stored >= 1 && stored <= MAX_START_LEVEL) ? stored : 1;
+  pmStartLevelSelect.value = startLevel;
+}
+
+// guarda la elección del <select> para la PRÓXIMA partida; no toca la
+// partida en curso (el `startLevel` activo solo se actualiza en init())
+function saveSelectedStartLevel(value) {
+  localStorage.setItem(START_LEVEL_STORAGE_KEY, String(value));
+}
+
+function openPauseMenu() {
+  cancelAnimationFrame(animId);
+  pmControlsView.classList.add('hidden'); // colapsa la vista de controles cada vez que se abre
+  pauseMenu.classList.remove('hidden');
+}
+
+function closePauseMenu() {
+  pauseMenu.classList.add('hidden');
+  lastTime = performance.now();
+  loop(lastTime);
+}
+
 function togglePause() {
   if (gameOver) return;
   paused = !paused;
   if (!paused) {
-    lastTime = performance.now();
-    loop(lastTime);
+    closePauseMenu();
   } else {
-    cancelAnimationFrame(animId);
-    overlayTitle.textContent = 'PAUSA';
-    overlayScore.textContent = '';
-    overlay.classList.remove('hidden');
+    openPauseMenu();
   }
 }
 
@@ -467,13 +522,14 @@ function loop(ts) {
 }
 
 function init() {
+  loadStartLevel();
   board = createBoard();
   score = 0;
   lines = 0;
-  level = 1;
+  level = startLevel;
   paused = false;
   gameOver = false;
-  dropInterval = 1000;
+  dropInterval = dropIntervalForLevel(startLevel);
   dropAccum = 0;
   lastTime = performance.now();
   powerCharge = 0;
@@ -486,12 +542,13 @@ function init() {
   spawn();
   updateHUD();
   overlay.classList.add('hidden');
+  pauseMenu.classList.add('hidden');
   cancelAnimationFrame(animId);
   animId = requestAnimationFrame(loop);
 }
 
 document.addEventListener('keydown', e => {
-  if (e.code === 'KeyP') { togglePause(); return; }
+  if (e.code === 'KeyP' || e.code === 'Escape') { togglePause(); return; }
   if (paused || gameOver) return;
   switch (e.code) {
     case 'ArrowLeft':
@@ -518,5 +575,16 @@ document.addEventListener('keydown', e => {
 restartBtn.addEventListener('click', init);
 themeToggle.addEventListener('change', () => setTheme(themeToggle.checked));
 
+pmResumeBtn.addEventListener('click', () => { if (paused) togglePause(); });
+pmRestartBtn.addEventListener('click', init);
+pmControlsToggleBtn.addEventListener('click', () => {
+  pmControlsView.classList.toggle('hidden');
+});
+pmStartLevelSelect.addEventListener('change', () => {
+  saveSelectedStartLevel(parseInt(pmStartLevelSelect.value, 10));
+});
+
+populateStartLevelOptions();
+initControlsView();
 init();
 loadTheme();
