@@ -291,3 +291,130 @@ kbd {
 @media (prefers-reduced-motion: reduce) {
   #board.power-flash { animation: none; }
 }
+
+/* ---- Tabla de récords ---- */
+.records {
+  width: 100%;
+  min-width: 220px;
+}
+
+.records-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0 0 8px;
+}
+
+.records-list li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--text-color);
+  padding: 3px 8px;
+  border-radius: 4px;
+  border-left: 3px solid transparent;
+}
+
+.records-list li.record-empty {
+  color: var(--muted);
+  justify-content: center;
+  font-size: 12px;
+}
+
+.record-rank {
+  color: var(--muted);
+  width: 16px;
+}
+
+.record-name {
+  flex: 1;
+  text-align: left;
+  font-weight: 600;
+}
+
+.record-score {
+  font-family: 'Courier New', Courier, monospace;
+  color: var(--accent);
+}
+
+.records-list li.record-new {
+  background: color-mix(in srgb, var(--accent) 20%, transparent);
+  border-left-color: var(--accent);
+}
+
+.records-stats {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 11px;
+  color: var(--muted);
+  border-top: 1px solid var(--border);
+  padding-top: 6px;
+}
+
+/* ---- Entrada de nombre para nuevo récord ---- */
+.record-entry {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.record-entry.hidden {
+  display: none;
+}
+
+#record-name {
+  width: 110px;
+  padding: 6px 8px;
+  font-size: 13px;
+  background: var(--bg-board);
+  color: var(--text-color);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+}
+
+#record-name:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+#save-record-btn {
+  background: var(--accent);
+  color: var(--restart-text);
+  border: none;
+  border-radius: 6px;
+  padding: 6px 14px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+#save-record-btn:hover {
+  background: var(--accent-hover);
+}
+
+.overlay-actions {
+  display: flex;
+  gap: 10px;
+}
+
+#reset-records {
+  margin-top: 8px;
+  background: transparent;
+  color: var(--muted);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 10px 16px;
+  font-size: 12px;
+  cursor: pointer;
+  letter-spacing: 0.5px;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+#reset-records:hover {
+  color: var(--overlay-title);
+  border-color: var(--overlay-title);
+}
