@@ -57,6 +57,9 @@ const overlayTitle = document.getElementById('overlay-title');
 const overlayScore = document.getElementById('overlay-score');
 const restartBtn = document.getElementById('restart-btn');
 const themeToggle = document.getElementById('theme-toggle');
+const startScreen = document.getElementById('start-screen');
+const startBtn = document.getElementById('start-btn');
+const startRecords = document.getElementById('start-records');
 
 const THEME_STORAGE_KEY = 'tetris-theme';
 const GRID_COLOR = { dark: '#22222e', light: '#e0e0e8' };
@@ -366,6 +369,8 @@ function drawPowerPreview() {
 }
 
 function draw() {
+  // antes de init() todavía no existen board/current: no hay nada que dibujar
+  if (!board || !current) return;
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   drawGrid();
 
@@ -398,6 +403,8 @@ function draw() {
 }
 
 function drawNext() {
+  // antes de init() todavía no existe next: no hay nada que dibujar
+  if (!next) return;
   const NB = 30;
   nextCtx.clearRect(0, 0, nextCanvas.width, nextCanvas.height);
   const shape = next.shape;
@@ -492,7 +499,8 @@ function init() {
 
 document.addEventListener('keydown', e => {
   if (e.code === 'KeyP') { togglePause(); return; }
-  if (paused || gameOver) return;
+  // todavía no se llamó a init() (pantalla de inicio): no hay pieza que mover
+  if (!current || paused || gameOver) return;
   switch (e.code) {
     case 'ArrowLeft':
       if (!collide(current.shape, current.x - 1, current.y)) current.x--;
@@ -518,5 +526,18 @@ document.addEventListener('keydown', e => {
 restartBtn.addEventListener('click', init);
 themeToggle.addEventListener('change', () => setTheme(themeToggle.checked));
 
-init();
+function showStartScreen() {
+  // otra unidad puede definir renderRecords(container) para pintar la tabla de records;
+  // si todavía no existe, la pantalla de inicio funciona igual con #start-records vacío
+  if (typeof renderRecords === 'function') renderRecords(startRecords);
+  startScreen.classList.remove('hidden');
+}
+
+startBtn.addEventListener('click', () => {
+  startScreen.classList.add('hidden');
+  init();
+});
+
+// al cargar la página no arrancamos el juego todavía: solo el tema y la pantalla de inicio
 loadTheme();
+showStartScreen();
