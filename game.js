@@ -44,6 +44,18 @@ const POWERUPS = [
 // puntos por bloque afectado; se multiplican por level igual que LINE_SCORES
 const POWER_POINTS = { bomb: 30, bolt: 20, dye: 10, gravity: 5, freeze: 250 };
 
+// paleta suavizada para el skin Pastel (mismo orden de índices que COLORS)
+const PASTEL_COLORS = [
+  null,
+  '#b3e5eb', // I
+  '#fff2c2', // O
+  '#e3c6ea', // T
+  '#c9e8ca', // S
+  '#f5c9c9', // Z
+  '#c3ddf7', // J
+  '#ffe0bd', // L
+];
+
 const canvas = document.getElementById('board');
 const ctx = canvas.getContext('2d');
 const nextCanvas = document.getElementById('next-canvas');
@@ -57,12 +69,15 @@ const overlayTitle = document.getElementById('overlay-title');
 const overlayScore = document.getElementById('overlay-score');
 const restartBtn = document.getElementById('restart-btn');
 const themeToggle = document.getElementById('theme-toggle');
+const skinSelect = document.getElementById('skin-select');
 
 const THEME_STORAGE_KEY = 'tetris-theme';
+const SKIN_STORAGE_KEY = 'tetris-skin';
 const GRID_COLOR = { dark: '#22222e', light: '#e0e0e8' };
 
 let board, current, next, score, lines, level, paused, gameOver, lastTime, dropAccum, dropInterval, animId;
 let powerCharge, powerArmed, freezeLeft, flashCells, flashLeft;
+let activeSkinId = 'retro';
 
 function createBoard() {
   return Array.from({ length: ROWS }, () => new Array(COLS).fill(0));
@@ -303,38 +318,230 @@ function updatePowerHUD() {
   powerStatusEl.style.color = color || '';
 }
 
+// ---- Skins: cada uno define cómo pintar un bloque normal y un bloque de power-up.
+// El resto del juego siempre llama a drawBlock()/drawPowerBlock() (firma estable);
+// estas dos delegan en el skin activo.
+
+function roundedRectPath(context, x, y, w, h, r) {
+  if (typeof context.roundRect === 'function') {
+    context.beginPath();
+    context.roundRect(x, y, w, h, r);
+    return;
+  }
+  // fallback manual (arcTo) para motores sin roundRect nativo
+  context.beginPath();
+  context.moveTo(x + r, y);
+  context.arcTo(x + w, y, x + w, y + h, r);
+  context.arcTo(x + w, y + h, x, y + h, r);
+  context.arcTo(x, y + h, x, y, r);
+  context.arcTo(x, y, x + w, y, r);
+  context.closePath();
+}
+
+function shadeColor(hex, amt) {
+  const num = parseInt(hex.slice(1), 16);
+  let r = (num >> 16) + amt;
+  let g = ((num >> 8) & 0xff) + amt;
+  let b = (num & 0xff) + amt;
+  r = Math.max(0, Math.min(255, r));
+  g = Math.max(0, Math.min(255, g));
+  b = Math.max(0, Math.min(255, b));
+  return `rgb(${r},${g},${b})`;
+}
+
+// dither/textura tipo pixel-art: cuadrícula 4x4 alternando luz/sombra sobre el color base
+function drawDither(context, px, py, size, hexColor) {
+  const light = shadeColor(hexColor, 22);
+  const dark = shadeColor(hexColor, -22);
+  const cell = size / 4;
+  for (let gy = 0; gy < 4; gy++) {
+    for (let gx = 0; gx < 4; gx++) {
+      context.fillStyle = (gx + gy) % 2 === 0 ? light : dark;
+      context.fillRect(px + gx * cell, py + gy * cell, cell, cell);
+    }
+  }
+}
+
+const SKINS = [
+  {
+    id: 'retro',
+    label: 'Retro',
+    colors: COLORS,
+    // idéntico byte a byte al render original: bloque plano + franja de brillo
+    drawBlock(context, x, y, colorIndex, size, alpha) {
+      const color = COLORS[colorIndex];
+      context.globalAlpha = alpha ?? 1;
+      context.fillStyle = color;
+      context.fillRect(x * size + 1, y * size + 1, size - 2, size - 2);
+      // highlight
+      context.fillStyle = 'rgba(255,255,255,0.12)';
+      context.fillRect(x * size + 1, y * size + 1, size - 2, 4);
+      context.globalAlpha = 1;
+    },
+    drawPowerBlock(context, x, y, size, alpha, kind) {
+      const p = POWERUPS[kind];
+      context.globalAlpha = alpha ?? 1;
+      context.fillStyle = p.color;
+      context.fillRect(x * size + 1, y * size + 1, size - 2, size - 2);
+      // highlight
+      context.fillStyle = 'rgba(255,255,255,0.25)';
+      context.fillRect(x * size + 1, y * size + 1, size - 2, 4);
+      // glifo
+      context.fillStyle = 'rgba(20,20,30,0.85)';
+      context.font = `bold ${Math.round(size * 0.62)}px system-ui, sans-serif`;
+      context.textAlign = 'center';
+      context.textBaseline = 'middle';
+      context.fillText(p.glyph, x * size + size / 2, y * size + size / 2 + 1);
+      context.globalAlpha = 1;
+    },
+  },
+  {
+    id: 'neon',
+    label: 'Neon',
+    colors: COLORS,
+    gridColor: () => 'rgba(0, 229, 255, 0.08)', // grid tenue cian, independiente de claro/oscuro
+    drawBlock(context, x, y, colorIndex, size, alpha) {
+      const color = COLORS[colorIndex];
+      context.globalAlpha = alpha ?? 1;
+      context.shadowBlur = 12;
+      context.shadowColor = color;
+      context.fillStyle = color;
+      context.fillRect(x * size + 2, y * size + 2, size - 4, size - 4);
+      // IMPORTANTE: apagar el resplandor tras cada bloque para que no se filtre
+      // al grid/ghost/siguiente elemento dibujado sobre el mismo canvas.
+      context.shadowBlur = 0;
+      context.shadowColor = 'transparent';
+      context.strokeStyle = color;
+      context.lineWidth = 1;
+      context.strokeRect(x * size + 1.5, y * size + 1.5, size - 3, size - 3);
+      context.globalAlpha = 1;
+    },
+    drawPowerBlock(context, x, y, size, alpha, kind) {
+      const p = POWERUPS[kind];
+      context.globalAlpha = alpha ?? 1;
+      context.shadowBlur = 16;
+      context.shadowColor = p.color;
+      context.fillStyle = p.color;
+      context.fillRect(x * size + 2, y * size + 2, size - 4, size - 4);
+      context.shadowBlur = 0;
+      context.shadowColor = 'transparent';
+      context.fillStyle = 'rgba(0,0,0,0.85)';
+      context.font = `bold ${Math.round(size * 0.62)}px system-ui, sans-serif`;
+      context.textAlign = 'center';
+      context.textBaseline = 'middle';
+      context.fillText(p.glyph, x * size + size / 2, y * size + size / 2 + 1);
+      context.globalAlpha = 1;
+    },
+  },
+  {
+    id: 'pastel',
+    label: 'Pastel',
+    colors: PASTEL_COLORS,
+    drawBlock(context, x, y, colorIndex, size, alpha) {
+      const color = PASTEL_COLORS[colorIndex];
+      const r = size * 0.22;
+      context.globalAlpha = alpha ?? 1;
+      context.save();
+      roundedRectPath(context, x * size + 1, y * size + 1, size - 2, size - 2, r);
+      context.clip();
+      context.fillStyle = color;
+      context.fillRect(x * size + 1, y * size + 1, size - 2, size - 2);
+      context.fillStyle = 'rgba(255,255,255,0.35)';
+      context.fillRect(x * size + 1, y * size + 1, size - 2, 4);
+      context.restore();
+      context.globalAlpha = 1;
+    },
+    drawPowerBlock(context, x, y, size, alpha, kind) {
+      const p = POWERUPS[kind];
+      const r = size * 0.22;
+      context.globalAlpha = alpha ?? 1;
+      context.save();
+      roundedRectPath(context, x * size + 1, y * size + 1, size - 2, size - 2, r);
+      context.clip();
+      context.fillStyle = p.color;
+      context.fillRect(x * size + 1, y * size + 1, size - 2, size - 2);
+      context.fillStyle = 'rgba(255,255,255,0.4)';
+      context.fillRect(x * size + 1, y * size + 1, size - 2, 4);
+      context.restore();
+      context.fillStyle = 'rgba(20,20,30,0.75)';
+      context.font = `bold ${Math.round(size * 0.6)}px system-ui, sans-serif`;
+      context.textAlign = 'center';
+      context.textBaseline = 'middle';
+      context.fillText(p.glyph, x * size + size / 2, y * size + size / 2 + 1);
+      context.globalAlpha = 1;
+    },
+  },
+  {
+    id: 'pixel',
+    label: 'Pixel Art',
+    colors: COLORS,
+    drawBlock(context, x, y, colorIndex, size, alpha) {
+      const color = COLORS[colorIndex];
+      context.globalAlpha = alpha ?? 1;
+      context.fillStyle = color;
+      context.fillRect(x * size + 1, y * size + 1, size - 2, size - 2);
+      drawDither(context, x * size + 1, y * size + 1, size - 2, color);
+      context.strokeStyle = 'rgba(0,0,0,0.35)';
+      context.lineWidth = 1;
+      context.strokeRect(x * size + 1.5, y * size + 1.5, size - 3, size - 3);
+      context.globalAlpha = 1;
+    },
+    drawPowerBlock(context, x, y, size, alpha, kind) {
+      const p = POWERUPS[kind];
+      context.globalAlpha = alpha ?? 1;
+      context.fillStyle = p.color;
+      context.fillRect(x * size + 1, y * size + 1, size - 2, size - 2);
+      drawDither(context, x * size + 1, y * size + 1, size - 2, p.color);
+      context.strokeStyle = 'rgba(0,0,0,0.35)';
+      context.lineWidth = 1;
+      context.strokeRect(x * size + 1.5, y * size + 1.5, size - 3, size - 3);
+      context.fillStyle = 'rgba(20,20,30,0.85)';
+      context.font = `bold ${Math.round(size * 0.62)}px system-ui, sans-serif`;
+      context.textAlign = 'center';
+      context.textBaseline = 'middle';
+      context.fillText(p.glyph, x * size + size / 2, y * size + size / 2 + 1);
+      context.globalAlpha = 1;
+    },
+  },
+];
+
+function getSkin() {
+  return SKINS.find(s => s.id === activeSkinId) || SKINS[0];
+}
+
+function getActiveSkin() {
+  return activeSkinId;
+}
+
+function setSkin(id) {
+  activeSkinId = SKINS.some(s => s.id === id) ? id : 'retro';
+  document.body.dataset.skin = activeSkinId;
+  if (skinSelect) skinSelect.value = activeSkinId;
+  localStorage.setItem(SKIN_STORAGE_KEY, activeSkinId);
+  draw();
+  drawNext();
+}
+
+function loadSkin() {
+  setSkin(localStorage.getItem(SKIN_STORAGE_KEY) || 'retro');
+}
+
 function drawBlock(context, x, y, colorIndex, size, alpha) {
   if (!colorIndex) return;
   if (colorIndex >= POWER_BASE) { drawPowerBlock(context, x, y, size, alpha, colorIndex - POWER_BASE); return; }
-  const color = COLORS[colorIndex];
-  context.globalAlpha = alpha ?? 1;
-  context.fillStyle = color;
-  context.fillRect(x * size + 1, y * size + 1, size - 2, size - 2);
-  // highlight
-  context.fillStyle = 'rgba(255,255,255,0.12)';
-  context.fillRect(x * size + 1, y * size + 1, size - 2, 4);
-  context.globalAlpha = 1;
+  getSkin().drawBlock(context, x, y, colorIndex, size, alpha);
 }
 
 function drawPowerBlock(context, x, y, size, alpha, kind) {
-  const p = POWERUPS[kind];
-  context.globalAlpha = alpha ?? 1;
-  context.fillStyle = p.color;
-  context.fillRect(x * size + 1, y * size + 1, size - 2, size - 2);
-  // highlight
-  context.fillStyle = 'rgba(255,255,255,0.25)';
-  context.fillRect(x * size + 1, y * size + 1, size - 2, 4);
-  // glifo
-  context.fillStyle = 'rgba(20,20,30,0.85)';
-  context.font = `bold ${Math.round(size * 0.62)}px system-ui, sans-serif`;
-  context.textAlign = 'center';
-  context.textBaseline = 'middle';
-  context.fillText(p.glyph, x * size + size / 2, y * size + size / 2 + 1);
-  context.globalAlpha = 1;
+  getSkin().drawPowerBlock(context, x, y, size, alpha, kind);
 }
 
 function drawGrid() {
-  ctx.strokeStyle = document.body.classList.contains('light-theme') ? GRID_COLOR.light : GRID_COLOR.dark;
+  const skin = getSkin();
+  const isLight = document.body.classList.contains('light-theme');
+  const color = skin.gridColor ? skin.gridColor(isLight) : (isLight ? GRID_COLOR.light : GRID_COLOR.dark);
+  if (!color) return; // el skin activo no quiere líneas de grid
+  ctx.strokeStyle = color;
   ctx.lineWidth = 0.5;
   for (let c = 1; c < COLS; c++) {
     ctx.beginPath();
@@ -517,6 +724,8 @@ document.addEventListener('keydown', e => {
 
 restartBtn.addEventListener('click', init);
 themeToggle.addEventListener('change', () => setTheme(themeToggle.checked));
+if (skinSelect) skinSelect.addEventListener('change', () => setSkin(skinSelect.value));
 
 init();
 loadTheme();
+loadSkin();
