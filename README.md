@@ -17,6 +17,7 @@ Implementación del clásico **Tetris** en JavaScript vanilla, usando HTML5 Canv
     - [Opción 1: abrir el archivo directamente](#opción-1-abrir-el-archivo-directamente)
     - [Opción 2: servidor local (recomendado)](#opción-2-servidor-local-recomendado)
   - [Controles](#controles)
+  - [Power-ups](#power-ups)
   - [Cómo funciona](#cómo-funciona)
     - [1. `index.html`](#1-indexhtml)
     - [2. `style.css`](#2-stylecss)
@@ -41,6 +42,7 @@ Es una versión jugable del Tetris clásico con todas las mecánicas que esperar
 - **Vista previa** de la siguiente pieza.
 - **Sistema de puntuación** clásico de Tetris (100 / 300 / 500 / 800 multiplicado por nivel).
 - **Niveles** que aumentan cada 10 líneas y aceleran la caída.
+- **Power-ups aleatorios**: cada 5 líneas eliminadas aparece una pieza especial con un efecto (Bomba, Rayo, Tinte, Gravedad o Congelar).
 - **Pausa** y **Game Over** con opción de reinicio.
 
 ---
@@ -86,6 +88,28 @@ Después abre `http://localhost:8000` en el navegador.
 | `Espacio` | Hard drop (caída instantánea)     |
 | `P`       | Pausar / reanudar                 |
 
+Los power-ups no necesitan teclas nuevas: llegan como una pieza que cae y se activan automáticamente al aterrizar.
+
+---
+
+## Power-ups
+
+Cada **5 líneas** eliminadas, la vista `NEXT` anuncia una pieza especial (un bloque 1×1 con un glifo) que, al aterrizar, dispara su efecto y desaparece del tablero — no se fusiona como una pieza normal.
+
+| Icono | Nombre     | Efecto                                                                 | Puntos               |
+| ----- | ---------- | ----------------------------------------------------------------------- | --------------------- |
+| ✷     | Bomba      | Destruye un área 3×3 centrada en la celda de aterrizaje                 | 30 × nivel / bloque   |
+| ↯     | Rayo       | Limpia la fila y la columna donde aterriza (una cruz)                   | 20 × nivel / bloque   |
+| ◈     | Tinte      | Destruye todos los bloques del color más abundante del tablero          | 10 × nivel / bloque   |
+| ⇓     | Gravedad   | Compacta los huecos: cada columna cae hasta el fondo                    | 5 × nivel / bloque    |
+| ✻     | Congelar   | Pausa la caída de la pieza actual durante 5 segundos (el input sigue vivo) | 250 × nivel (fijo)  |
+
+Notas de diseño:
+
+- **Bomba y Rayo dejan huecos y bloques flotantes a propósito** — no compactan el tablero por sí solos. Para eso está **Gravedad**: sin los huecos de los otros dos efectos, Gravedad no tendría nada que hacer.
+- **Tinte** y **Gravedad** sí pueden completar filas (cascada), y esas filas cuentan como líneas normales — pero los bloques destruidos directamente por un power-up solo dan puntos, nunca incrementan el contador de `LINES` (para evitar que un power-up dispare el nivel y se auto-alimente).
+- Congelar no cancela el aterrizaje ni el input: puedes seguir moviendo, rotando y haciendo soft/hard drop mientras el tablero está congelado.
+
 ---
 
 ## Cómo funciona
@@ -97,7 +121,7 @@ El juego se compone de tres archivos que cooperan:
 Define la estructura visual:
 
 - Un `<canvas id="board">` de **300 × 600** píxeles donde se renderiza el tablero.
-- Un panel lateral con `SCORE`, `LINES`, `LEVEL`, vista de la siguiente pieza y la lista de controles.
+- Un panel lateral con `SCORE`, `LINES`, `LEVEL`, `POWER-UP` (estado del próximo/actual power-up), vista de la siguiente pieza, la leyenda de power-ups y la lista de controles.
 - Un overlay para los estados **PAUSA** y **GAME OVER**.
 
 ### 2. `style.css`
@@ -117,6 +141,7 @@ Contiene toda la lógica del juego. A grandes rasgos:
 - **Puntuación**: usa la tabla clásica `[0, 100, 300, 500, 800]` multiplicada por el nivel actual; el hard drop suma 2 puntos por celda recorrida y el soft drop 1 punto por fila.
 - **Nivel y velocidad**: el nivel sube cada 10 líneas; la velocidad de caída se calcula como `max(100, 1000 − (level − 1) × 90)` milisegundos.
 - **Ghost piece** (`ghostY`): proyecta la posición final de la pieza actual hacia abajo y la dibuja con `globalAlpha = 0.2`.
+- **Power-ups**: cada 5 líneas se arma la siguiente pieza generada como power-up (bloque 1×1, valores de celda 8–12 que nunca se escriben en `board`). Al aterrizar, `lockPiece` la dispara (`firePowerUp`) en lugar de fusionarla; los efectos posicionales (Bomba, Rayo) se telegrafían en el tablero como el ghost. Congelar usa un contador `freezeLeft` basado en delta-tiempo, así que sobrevive a la pausa sin usar `Date.now()`.
 
 ### Flujo del juego
 
@@ -128,10 +153,16 @@ init()
   └─ requestAnimationFrame(loop)
         ↓
    loop(timestamp)
+     ├─ si gameOver → return (no se reprograma)
      ├─ acumula dt
-     ├─ si dt ≥ dropInterval → baja la pieza o llama a lockPiece()
-     ├─ draw()  (grid + tablero + ghost + pieza actual)
+     ├─ si freezeLeft > 0 → no baja la pieza (solo descuenta freezeLeft)
+     ├─ si no: si dt ≥ dropInterval → baja la pieza o llama a lockPiece()
+     ├─ draw()  (grid + tablero + destello + ghost + pieza actual)
      └─ requestAnimationFrame(loop)
+
+   lockPiece()
+     ├─ si pieza normal  → merge() → clearLines()
+     └─ si power-up      → firePowerUp() (no hace merge: la pieza desaparece)
 
    keydown → mover / rotar / soft-drop / hard-drop / pausa
 ```
@@ -158,7 +189,7 @@ Cuando una pieza recién generada ya colisiona al aparecer (`spawn`), se dispara
 03-tetris/
 ├── index.html      # Estructura del DOM y canvas
 ├── style.css       # Estilos del juego (dark theme)
-├── game.js         # Toda la lógica del Tetris (~300 líneas)
+├── game.js         # Toda la lógica del Tetris (~460 líneas)
 └── README.md
 ```
 
@@ -176,6 +207,8 @@ Algunos parámetros fáciles de tunear en `game.js`:
 | `COLORS`       | Paleta de colores por tipo de pieza      | 7 colores             |
 | `LINE_SCORES`  | Puntos por 1, 2, 3 o 4 líneas eliminadas | `[0,100,300,500,800]` |
 | `dropInterval` | Velocidad inicial de caída en ms         | `1000`                |
+| `POWERUP_EVERY`| Líneas necesarias para armar un power-up | `5`                    |
+| `FREEZE_MS`    | Duración del efecto Congelar en ms       | `5000`                 |
 
 > Si cambias `COLS`, `ROWS` o `BLOCK`, recuerda ajustar también `width` y `height` del `<canvas id="board">` en `index.html` para que coincida (`COLS × BLOCK` × `ROWS × BLOCK`).
 

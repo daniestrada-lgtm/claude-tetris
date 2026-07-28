@@ -83,7 +83,7 @@ body {
   width: 160px;
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 14px;
   padding-top: 4px;
 }
 
@@ -242,4 +242,52 @@ kbd {
 
 #restart-btn:hover {
   background: var(--accent-hover);
+}
+
+/* ---- Power-ups ---- */
+.value-sm {
+  font-size: 13px;
+  letter-spacing: 0.5px;
+  min-height: 18px;
+}
+
+.powerups ul {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.powerups li {
+  font-size: 11px;
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.powerups b {
+  font-size: 14px;
+  width: 14px;
+  text-align: center;
+}
+
+.pu-bomb    { color: #ff7043; }
+.pu-bolt    { color: #ffee58; }
+.pu-dye     { color: #f06292; }
+.pu-gravity { color: #4db6ac; }
+.pu-freeze  { color: #90caf9; }
+
+@keyframes power-flash {
+  0%   { box-shadow: 0 0 40px rgba(0, 0, 0, 0.6), 0 0 0 0 var(--accent); }
+  35%  { box-shadow: 0 0 60px var(--accent), 0 0 0 3px var(--accent); }
+  100% { box-shadow: 0 0 40px rgba(0, 0, 0, 0.6), 0 0 0 0 var(--accent); }
+}
+
+#board.power-flash {
+  animation: power-flash 420ms ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #board.power-flash { animation: none; }
 }
