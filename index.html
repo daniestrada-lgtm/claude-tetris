@@ -56,12 +56,12 @@
 
         <div class="panel-section controls">
           <span class="label">CONTROLS</span>
-          <ul>
+          <ul id="controls-list">
             <li><kbd>←</kbd><kbd>→</kbd> mover</li>
             <li><kbd>↑</kbd> rotar</li>
             <li><kbd>↓</kbd> bajar</li>
             <li><kbd>Space</kbd> caída</li>
-            <li><kbd>P</kbd> pausa</li>
+            <li><kbd>P</kbd> <kbd>Esc</kbd> pausa</li>
           </ul>
         </div>
       </aside>
@@ -71,7 +71,26 @@
       <div class="overlay-box">
         <p id="overlay-title">GAME OVER</p>
         <p id="overlay-score"></p>
-        <button id="restart-btn">Reiniciar</button>
+        <button id="restart-btn" class="btn">Reiniciar</button>
+      </div>
+    </div>
+
+    <div id="pause-menu" class="overlay hidden">
+      <div class="overlay-box">
+        <p id="pause-menu-title">PAUSA</p>
+
+        <div class="panel-section">
+          <span class="label">NIVEL INICIAL</span>
+          <select id="pm-start-level" aria-label="Nivel inicial de la próxima partida"></select>
+        </div>
+
+        <div id="pm-controls-view" class="controls hidden">
+          <!-- se rellena en tiempo de ejecución con un clon de #controls-list -->
+        </div>
+
+        <button id="pm-resume" class="btn">Reanudar</button>
+        <button id="pm-controls-toggle" class="btn">Ver controles</button>
+        <button id="pm-restart" class="btn">Reiniciar</button>
       </div>
     </div>
   </div>

@@ -201,7 +201,7 @@ kbd {
   border-radius: 4px;
 }
 
-.overlay.hidden {
+.hidden {
   display: none;
 }
 
@@ -213,7 +213,8 @@ kbd {
   align-items: center;
 }
 
-#overlay-title {
+#overlay-title,
+#pause-menu-title {
   font-size: 28px;
   font-weight: 800;
   letter-spacing: 4px;
@@ -226,7 +227,7 @@ kbd {
   color: var(--accent);
 }
 
-#restart-btn {
+.btn {
   margin-top: 8px;
   background: var(--accent);
   color: var(--restart-text);
@@ -240,8 +241,19 @@ kbd {
   transition: background 0.15s;
 }
 
-#restart-btn:hover {
+.btn:hover {
   background: var(--accent-hover);
+}
+
+/* ---- Menú de pausa ---- */
+#pm-start-level {
+  background: var(--kbd-bg);
+  border: 1px solid var(--kbd-border);
+  color: var(--text-color);
+  border-radius: 4px;
+  padding: 6px 10px;
+  font-size: 14px;
+  font-family: inherit;
 }
 
 /* ---- Power-ups ---- */
