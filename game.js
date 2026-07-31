@@ -4,16 +4,28 @@ const COLS = 10;
 const ROWS = 20;
 const BLOCK = 30;
 
-const COLORS = [
-  null,
-  '#4dd0e1', // I - cyan
-  '#ffd54f', // O - yellow
-  '#ba68c8', // T - purple
-  '#81c784', // S - green
-  '#e57373', // Z - red
-  '#64b5f6', // J - light blue
-  '#ffb74d', // L - orange
-];
+const SKINS = {
+  retro: {
+    label: 'Retro',
+    colors: [null, '#4dd0e1', '#ffd54f', '#ba68c8', '#81c784', '#e57373', '#64b5f6', '#ffb74d'],
+  },
+  neon: {
+    label: 'Neon',
+    colors: [null, '#00e5ff', '#ffea00', '#e040fb', '#00e676', '#ff1744', '#2979ff', '#ff9100'],
+  },
+  pastel: {
+    label: 'Pastel',
+    colors: [null, '#a8e6e6', '#fff2b2', '#dcc6e0', '#c8e6c9', '#ffcdd2', '#bbdefb', '#ffe0b2'],
+  },
+  pixel: {
+    label: 'Pixel art',
+    colors: [null, '#4dd0e1', '#ffd54f', '#ba68c8', '#81c784', '#e57373', '#64b5f6', '#ffb74d'],
+  },
+};
+
+const SKIN_STORAGE_KEY = 'tetris-skin';
+let skinName = 'retro';
+let COLORS = SKINS.retro.colors;
 
 const PIECES = [
   null,
@@ -57,6 +69,7 @@ const overlayTitle = document.getElementById('overlay-title');
 const overlayScore = document.getElementById('overlay-score');
 const restartBtn = document.getElementById('restart-btn');
 const themeToggle = document.getElementById('theme-toggle');
+const skinSelect = document.getElementById('skin-select');
 
 const THEME_STORAGE_KEY = 'tetris-theme';
 const GRID_COLOR = { dark: '#22222e', light: '#e0e0e8' };
@@ -307,12 +320,76 @@ function drawBlock(context, x, y, colorIndex, size, alpha) {
   if (!colorIndex) return;
   if (colorIndex >= POWER_BASE) { drawPowerBlock(context, x, y, size, alpha, colorIndex - POWER_BASE); return; }
   const color = COLORS[colorIndex];
+  switch (skinName) {
+    case 'neon':   drawBlockNeon(context, x, y, color, size, alpha);   break;
+    case 'pastel': drawBlockPastel(context, x, y, color, size, alpha); break;
+    case 'pixel':  drawBlockPixel(context, x, y, color, size, alpha);  break;
+    default:       drawBlockRetro(context, x, y, color, size, alpha);
+  }
+}
+
+function drawBlockRetro(context, x, y, color, size, alpha) {
   context.globalAlpha = alpha ?? 1;
   context.fillStyle = color;
   context.fillRect(x * size + 1, y * size + 1, size - 2, size - 2);
   // highlight
   context.fillStyle = 'rgba(255,255,255,0.12)';
   context.fillRect(x * size + 1, y * size + 1, size - 2, 4);
+  context.globalAlpha = 1;
+}
+
+function drawBlockNeon(context, x, y, color, size, alpha) {
+  context.globalAlpha = alpha ?? 1;
+  context.save();
+  context.shadowColor = color;
+  context.shadowBlur = size * 0.7;
+  context.fillStyle = color;
+  context.fillRect(x * size + 2, y * size + 2, size - 4, size - 4);
+  context.restore();
+  // núcleo brillante, sin glow para que resalte
+  context.fillStyle = 'rgba(255,255,255,0.35)';
+  context.fillRect(x * size + size * 0.32, y * size + size * 0.32, size * 0.36, size * 0.36);
+  context.globalAlpha = 1;
+}
+
+function roundedRectPath(context, x, y, w, h, r) {
+  r = Math.min(r, w / 2, h / 2);
+  context.beginPath();
+  context.moveTo(x + r, y);
+  context.arcTo(x + w, y, x + w, y + h, r);
+  context.arcTo(x + w, y + h, x, y + h, r);
+  context.arcTo(x, y + h, x, y, r);
+  context.arcTo(x, y, x + w, y, r);
+  context.closePath();
+}
+
+function drawBlockPastel(context, x, y, color, size, alpha) {
+  context.globalAlpha = alpha ?? 1;
+  roundedRectPath(context, x * size + 2, y * size + 2, size - 4, size - 4, size * 0.22);
+  context.fillStyle = color;
+  context.fill();
+  roundedRectPath(context, x * size + 3, y * size + 3, size - 6, (size - 6) * 0.4, size * 0.16);
+  context.fillStyle = 'rgba(255,255,255,0.4)';
+  context.fill();
+  context.globalAlpha = 1;
+}
+
+function drawBlockPixel(context, x, y, color, size, alpha) {
+  context.globalAlpha = alpha ?? 1;
+  context.fillStyle = color;
+  context.fillRect(x * size + 1, y * size + 1, size - 2, size - 2);
+  // textura de píxeles alternados, estilo sprite retro
+  const n = 4;
+  const cell = (size - 2) / n;
+  for (let i = 0; i < n; i++) {
+    for (let j = 0; j < n; j++) {
+      context.fillStyle = (i + j) % 2 === 0 ? 'rgba(255,255,255,0.14)' : 'rgba(0,0,0,0.12)';
+      context.fillRect(x * size + 1 + i * cell, y * size + 1 + j * cell, cell, cell);
+    }
+  }
+  context.strokeStyle = 'rgba(0,0,0,0.35)';
+  context.lineWidth = 1;
+  context.strokeRect(x * size + 1.5, y * size + 1.5, size - 3, size - 3);
   context.globalAlpha = 1;
 }
 
@@ -428,6 +505,23 @@ function loadTheme() {
   setTheme(localStorage.getItem(THEME_STORAGE_KEY) === 'light');
 }
 
+function setSkin(name) {
+  if (!SKINS[name]) name = 'retro';
+  skinName = name;
+  COLORS = SKINS[name].colors;
+  for (const key of Object.keys(SKINS)) document.body.classList.remove(`skin-${key}`);
+  document.body.classList.add(`skin-${name}`);
+  skinSelect.value = name;
+  localStorage.setItem(SKIN_STORAGE_KEY, name);
+  draw();
+  drawNext();
+}
+
+function loadSkin() {
+  const saved = localStorage.getItem(SKIN_STORAGE_KEY);
+  setSkin(SKINS[saved] ? saved : 'retro');
+}
+
 function togglePause() {
   if (gameOver) return;
   paused = !paused;
@@ -517,6 +611,8 @@ document.addEventListener('keydown', e => {
 
 restartBtn.addEventListener('click', init);
 themeToggle.addEventListener('change', () => setTheme(themeToggle.checked));
+skinSelect.addEventListener('change', () => setSkin(skinSelect.value));
 
 init();
 loadTheme();
+loadSkin();

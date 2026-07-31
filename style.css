@@ -163,6 +163,32 @@ body {
   outline-offset: 2px;
 }
 
+/* ---- Skin select ---- */
+.skin-select {
+  width: fit-content;
+  background: var(--kbd-bg);
+  color: var(--text-color);
+  border: 1px solid var(--kbd-border);
+  border-radius: 4px;
+  padding: 4px 8px;
+  font-size: 12px;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.skin-select:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* ---- Skins ---- */
+body.skin-neon #board,
+body.skin-neon #next-canvas {
+  background: #05050a;
+  border-color: #16324a;
+  box-shadow: 0 0 40px rgba(0, 229, 255, 0.15);
+}
+
 /* ---- Controles ---- */
 .controls ul {
   list-style: none;
