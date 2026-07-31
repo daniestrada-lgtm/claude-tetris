@@ -291,3 +291,136 @@ kbd {
 @media (prefers-reduced-motion: reduce) {
   #board.power-flash { animation: none; }
 }
+
+/* ---- Records ---- */
+.records-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 12px;
+}
+
+.records-list li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted);
+  padding: 2px 4px;
+  border-radius: 3px;
+}
+
+.records-rank {
+  width: 14px;
+  color: var(--label-color);
+}
+
+.records-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.records-score {
+  color: var(--text-color);
+  font-weight: 700;
+}
+
+.records-empty {
+  color: var(--muted);
+  font-style: italic;
+}
+
+.records-highlight {
+  background: var(--accent);
+}
+
+.records-highlight .records-rank,
+.records-highlight .records-name,
+.records-highlight .records-score {
+  color: var(--restart-text);
+}
+
+.records-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 4px;
+}
+
+.records-stats b {
+  color: var(--accent);
+}
+
+.reset-records-btn {
+  margin-top: 6px;
+  background: transparent;
+  color: var(--muted);
+  border: 1px solid var(--kbd-border);
+  border-radius: 4px;
+  padding: 4px 8px;
+  font-size: 10px;
+  cursor: pointer;
+  letter-spacing: 0.5px;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.reset-records-btn:hover {
+  color: var(--text-color);
+  border-color: var(--accent);
+}
+
+/* ---- Overlay: nombre + records ---- */
+#overlay-stats {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.name-entry {
+  display: flex;
+  gap: 6px;
+}
+
+.name-entry.hidden {
+  display: none;
+}
+
+#player-name-input {
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 13px;
+  padding: 6px 8px;
+  border-radius: 4px;
+  border: 1px solid var(--kbd-border);
+  background: var(--kbd-bg);
+  color: var(--text-color);
+  width: 120px;
+  text-transform: uppercase;
+}
+
+#player-name-input:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+#save-score-btn {
+  background: var(--accent);
+  color: var(--restart-text);
+  border: none;
+  border-radius: 4px;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+#save-score-btn:hover {
+  background: var(--accent-hover);
+}
+
+.overlay-box .records-list {
+  width: 200px;
+}

@@ -46,6 +46,10 @@ Every `POWERUP_EVERY` (5) lines cleared arms `powerArmed`; it's consumed by the 
 1. **Never write `dropInterval` for Congelar.** `clearLines()` unconditionally recomputes `dropInterval` on every clear, so any direct override gets silently clobbered. Congelar instead ticks a `dt`-based `freezeLeft` down inside `loop()`, which is pause-safe for free (`togglePause()` resets `lastTime` on resume).
 2. **Destroyed/moved cells never increment `lines`.** `lines` drives both level speed and the power-up cadence — feeding bomb/rayo/tinte destruction counts into it would create a feedback loop. Only genuinely completed rows (via `clearLines()`, including cascades from Tinte/Gravedad) count.
 
+### Local records
+
+Persisted in `localStorage` under `tetris-records` as `{ scores: [{name, score, lines, combo}, ...], bestCombo, maxLines }`. `scores` holds at most `MAX_RECORDS` (5) entries, kept sorted descending by `score`. `combo` is a consecutive-clear streak counted only across real piece locks (`lockPiece`'s `merge()`/`clearLines()` branch) — power-up detonations never touch it, matching the "power-ups never feed `lines`" rule above. `bestCombo`/`maxLines` are separate all-time stats updated on every `endGame()` regardless of whether the run's score made the top 5. The records list and stats render both in the always-visible sidebar panel and in the game-over overlay (`renderRecords`); the overlay additionally shows a name-entry field, but only when `qualifiesForTop(score)` is true.
+
 ### Control flow
 
 `init()` builds the board, seeds `next`, calls `spawn()`, and starts the `loop`. Each `keydown` dispatches to move/rotate/soft-drop/hard-drop/pause handlers (see the `switch` at the bottom of `game.js`); `P` toggles pause independent of game-over state. If a freshly spawned piece immediately collides, `endGame()` fires and shows the Game Over overlay; `#restart-btn` calls `init()` again.
