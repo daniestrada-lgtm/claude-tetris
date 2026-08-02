@@ -67,10 +67,31 @@
       </aside>
     </div>
 
+    <div id="start-overlay" class="overlay">
+      <div class="overlay-box">
+        <p class="start-heading">TETRIS</p>
+        <p class="start-subheading">Mejores puntuaciones</p>
+        <div id="start-leaderboard" class="leaderboard"></div>
+        <div class="start-actions">
+          <button id="play-btn">Jugar</button>
+          <button id="reset-scores-btn" class="btn-secondary">Reiniciar récords</button>
+        </div>
+      </div>
+    </div>
+
     <div id="overlay" class="overlay hidden">
       <div class="overlay-box">
         <p id="overlay-title">GAME OVER</p>
         <p id="overlay-score"></p>
+
+        <div id="name-entry" class="name-entry hidden">
+          <p class="hs-new">¡Nuevo récord!</p>
+          <input id="name-input" class="name-input" maxlength="10" placeholder="Tu nombre" autocomplete="off" />
+          <button id="save-score-btn">Guardar</button>
+        </div>
+
+        <div id="overlay-leaderboard" class="leaderboard hidden"></div>
+
         <button id="restart-btn">Reiniciar</button>
       </div>
     </div>

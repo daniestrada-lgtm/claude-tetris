@@ -291,3 +291,157 @@ kbd {
 @media (prefers-reduced-motion: reduce) {
   #board.power-flash { animation: none; }
 }
+
+/* ---- Start screen ---- */
+.start-heading {
+  font-size: 26px;
+  font-weight: 800;
+  letter-spacing: 6px;
+  color: var(--accent);
+}
+
+.start-subheading {
+  font-size: 12px;
+  letter-spacing: 1px;
+  color: var(--muted);
+  margin-top: -6px;
+}
+
+.start-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: center;
+  margin-top: 4px;
+}
+
+.btn-secondary {
+  background: transparent;
+  color: var(--muted);
+  border: 1px solid var(--kbd-border);
+  border-radius: 6px;
+  padding: 6px 16px;
+  font-size: 11px;
+  cursor: pointer;
+  letter-spacing: 0.5px;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.btn-secondary:hover {
+  color: var(--text-color);
+  border-color: var(--accent);
+}
+
+/* ---- Leaderboard ---- */
+.leaderboard {
+  width: 260px;
+  max-width: 80vw;
+}
+
+.hs-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 13px;
+}
+
+.hs-list li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  color: var(--text-color);
+}
+
+.hs-rank {
+  color: var(--label-color);
+  width: 16px;
+}
+
+.hs-name {
+  flex: 1;
+  text-align: left;
+  letter-spacing: 1px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hs-score {
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.hs-list li.hs-highlight {
+  background: rgba(122, 162, 247, 0.18);
+  outline: 1px solid var(--accent);
+}
+
+.hs-empty {
+  font-size: 12px;
+  color: var(--muted);
+  text-align: center;
+  padding: 8px 0;
+}
+
+.hs-stats {
+  margin-top: 8px;
+  font-size: 11px;
+  color: var(--muted);
+  text-align: center;
+  line-height: 1.6;
+}
+
+/* ---- Name entry (nuevo récord) ---- */
+.name-entry {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.hs-new {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--overlay-title);
+  letter-spacing: 1px;
+}
+
+.name-input {
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 14px;
+  letter-spacing: 2px;
+  text-align: center;
+  text-transform: uppercase;
+  background: var(--kbd-bg);
+  border: 1px solid var(--kbd-border);
+  border-radius: 6px;
+  color: var(--text-color);
+  padding: 8px 10px;
+  width: 140px;
+}
+
+.name-input:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+#save-score-btn {
+  background: var(--accent);
+  color: var(--restart-text);
+  border: none;
+  border-radius: 6px;
+  padding: 8px 20px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  letter-spacing: 1px;
+  transition: background 0.15s;
+}
+
+#save-score-btn:hover {
+  background: var(--accent-hover);
+}
