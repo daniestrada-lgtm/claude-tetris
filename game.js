@@ -57,12 +57,23 @@ const overlayTitle = document.getElementById('overlay-title');
 const overlayScore = document.getElementById('overlay-score');
 const restartBtn = document.getElementById('restart-btn');
 const themeToggle = document.getElementById('theme-toggle');
+const gameoverBox = document.getElementById('gameover-box');
+const pauseBox = document.getElementById('pause-box');
+const pauseViewMain = document.getElementById('pause-view-main');
+const pauseViewControls = document.getElementById('pause-view-controls');
+const resumeBtn = document.getElementById('resume-btn');
+const pauseRestartBtn = document.getElementById('pause-restart-btn');
+const showControlsBtn = document.getElementById('show-controls-btn');
+const hideControlsBtn = document.getElementById('hide-controls-btn');
+const startLevelSelect = document.getElementById('start-level-select');
 
 const THEME_STORAGE_KEY = 'tetris-theme';
+const START_LEVEL_STORAGE_KEY = 'tetris-start-level';
+const MAX_START_LEVEL = 10;
 const GRID_COLOR = { dark: '#22222e', light: '#e0e0e8' };
 
 let board, current, next, score, lines, level, paused, gameOver, lastTime, dropAccum, dropInterval, animId;
-let powerCharge, powerArmed, freezeLeft, flashCells, flashLeft;
+let powerCharge, powerArmed, freezeLeft, flashCells, flashLeft, startLevel;
 
 function createBoard() {
   return Array.from({ length: ROWS }, () => new Array(COLS).fill(0));
@@ -135,7 +146,7 @@ function clearLines() {
   if (cleared) {
     lines += cleared;
     score += LINE_SCORES[Math.min(cleared, LINE_SCORES.length - 1)] * level;
-    level = Math.floor(lines / 10) + 1;
+    level = Math.floor(lines / 10) + startLevel;
     dropInterval = Math.max(100, 1000 - (level - 1) * 90);
     powerCharge += cleared;
     if (powerCharge >= POWERUP_EVERY) { powerCharge -= POWERUP_EVERY; powerArmed = true; }
@@ -411,6 +422,8 @@ function drawNext() {
 function endGame() {
   gameOver = true;
   cancelAnimationFrame(animId);
+  pauseBox.classList.add('hidden');
+  gameoverBox.classList.remove('hidden');
   overlayTitle.textContent = 'GAME OVER';
   overlayScore.textContent = `Puntuación: ${score.toLocaleString()}`;
   overlay.classList.remove('hidden');
@@ -428,17 +441,44 @@ function loadTheme() {
   setTheme(localStorage.getItem(THEME_STORAGE_KEY) === 'light');
 }
 
+function setStartLevel(value) {
+  startLevel = Math.min(MAX_START_LEVEL, Math.max(1, value));
+  startLevelSelect.value = String(startLevel);
+  localStorage.setItem(START_LEVEL_STORAGE_KEY, String(startLevel));
+}
+
+function loadStartLevel() {
+  const stored = parseInt(localStorage.getItem(START_LEVEL_STORAGE_KEY), 10);
+  setStartLevel(Number.isInteger(stored) ? stored : 1);
+}
+
+function showPauseView(view) {
+  pauseViewMain.classList.toggle('hidden', view !== 'main');
+  pauseViewControls.classList.toggle('hidden', view !== 'controls');
+}
+
+function openPauseMenu() {
+  paused = true;
+  cancelAnimationFrame(animId);
+  showPauseView('main');
+  gameoverBox.classList.add('hidden');
+  pauseBox.classList.remove('hidden');
+  overlay.classList.remove('hidden');
+}
+
+function resumeGame() {
+  paused = false;
+  overlay.classList.add('hidden');
+  lastTime = performance.now();
+  animId = requestAnimationFrame(loop);
+}
+
 function togglePause() {
   if (gameOver) return;
-  paused = !paused;
-  if (!paused) {
-    lastTime = performance.now();
-    loop(lastTime);
+  if (paused) {
+    resumeGame();
   } else {
-    cancelAnimationFrame(animId);
-    overlayTitle.textContent = 'PAUSA';
-    overlayScore.textContent = '';
-    overlay.classList.remove('hidden');
+    openPauseMenu();
   }
 }
 
@@ -470,10 +510,10 @@ function init() {
   board = createBoard();
   score = 0;
   lines = 0;
-  level = 1;
+  level = startLevel;
   paused = false;
   gameOver = false;
-  dropInterval = 1000;
+  dropInterval = Math.max(100, 1000 - (level - 1) * 90);
   dropAccum = 0;
   lastTime = performance.now();
   powerCharge = 0;
@@ -485,13 +525,16 @@ function init() {
   next = randomPiece();
   spawn();
   updateHUD();
+  gameoverBox.classList.remove('hidden');
+  pauseBox.classList.add('hidden');
+  showPauseView('main');
   overlay.classList.add('hidden');
   cancelAnimationFrame(animId);
   animId = requestAnimationFrame(loop);
 }
 
 document.addEventListener('keydown', e => {
-  if (e.code === 'KeyP') { togglePause(); return; }
+  if (e.code === 'KeyP' || e.code === 'Escape') { togglePause(); return; }
   if (paused || gameOver) return;
   switch (e.code) {
     case 'ArrowLeft':
@@ -517,6 +560,12 @@ document.addEventListener('keydown', e => {
 
 restartBtn.addEventListener('click', init);
 themeToggle.addEventListener('change', () => setTheme(themeToggle.checked));
+resumeBtn.addEventListener('click', resumeGame);
+pauseRestartBtn.addEventListener('click', init);
+showControlsBtn.addEventListener('click', () => showPauseView('controls'));
+hideControlsBtn.addEventListener('click', () => showPauseView('main'));
+startLevelSelect.addEventListener('change', () => setStartLevel(parseInt(startLevelSelect.value, 10)));
 
+loadStartLevel();
 init();
 loadTheme();
